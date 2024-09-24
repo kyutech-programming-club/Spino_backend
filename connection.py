@@ -19,7 +19,6 @@ connector = UnityConnector(on_timeout=on_timeout, on_stopped=on_stopped)
 def on_data_received(data_type, data):
     print(data_type, data)
 
-
 print("connecting...")
 
 # Unity側の接続を待つ
@@ -28,22 +27,23 @@ connector.start_listening(on_data_received)
 print("connected")
 
 # デモ用のループ
-while True:
-    # Enterで送信を開始（入力内容は送信内容と関係ない）
-    input_data = input()
+def send_data_loop(data: dict):
+    while True:
+        # Enterで送信を開始（入力内容は送信内容と関係ない）
+        input_data = input()
 
-    # Unityへ停止命令
-    if input_data == "q":
-        connector.stop_connection()
-        break
+        # Unityへ停止命令
+        if input_data == "q":
+            connector.stop_connection()
+            break
 
-    # 送るデータをdictionary形式で
-    data = {
-        "testValue0": 334,
-        "testValue1": "test",
-    }
+        # 送るデータをdictionary形式で
+        data = data
 
-    print(data)
+        print(f"send_data:{data}")
 
-    # Unityへ送る
-    connector.send("test", data)
+        # Unityへ送る
+        connector.send("test", data)
+
+if __name__ == "__main__":
+    send_data_loop({"test": "test"})
