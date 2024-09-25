@@ -89,33 +89,46 @@ for file in os.listdir(ms_dict_path):
     file_path = os.path.join(ms_dict_path, file)
     os.remove(file_path)
 
+# フラグ: "ファ5"が検出されたかどうかを追跡
+found_fa5 = False
+
 # 音声データをUnityに送信する
 for audio_data in split_audio_data:
-    ms_dict[current_i] = ms_recognition(audio_data)
-    ms_list.append(ms_dict[current_i])
-    current_i += 1
+    detected_note = ms_recognition(audio_data)
+    
+    # "ファ5"が見つかっていないかつ"ファ5"が検知された場合、フラグをTrueにする
+    if not found_fa5 and detected_note == "ファ5":
+        print("ファ5が検知されました。ここからJSONファイルを生成します。")
+        found_fa5 = True
 
-    # 1小節分の音階を取得したらUnityに送信する
-    if current_i == 8:
-        filename = get_next_filename("ms_dict", "json", i)
-        ms_save_path= os.path.join(ms_dict_path, filename)
-        print("******************************************************************")
-        print(f"{i + 1}小節目終了")
-        print("******************************************************************")
-        
-        # Save the data for the measure into a JSON file
-        with open(ms_save_path, "w", encoding="utf-8") as f:
-            f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
-        test = {"key": ','.join(ms_list)}
-        print(test)
-        # Send the data to Unity
-        send_data_loop(test)
-        print(ms_dict)
-        
-        # Reset for the next measure
-        ms_dict = {}
-        current_i = 0
-        i += 1
+    # "ファ5"を検知した後のみ、処理を進める
+    if found_fa5:
+        ms_dict[current_i] = detected_note
+        ms_list.append(ms_dict[current_i])
+        current_i += 1
+
+        # 1小節分の音階を取得したらUnityに送信する
+        if current_i == 8:
+            filename = get_next_filename("ms_dict", "json", i)
+            ms_save_path= os.path.join(ms_dict_path, filename)
+            print("******************************************************************")
+            print(f"{i + 1}小節目終了")
+            print("******************************************************************")
+            
+            # Save the data for the measure into a JSON file
+            with open(ms_save_path, "w", encoding="utf-8") as f:
+                f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
+            
+            # Send the data to Unity
+            test = {"key": ','.join(ms_list)}
+            print(test)
+            send_data_loop(test)
+            print(ms_dict)
+            
+            # Reset for the next measure
+            ms_dict = {}
+            current_i = 0
+            i += 1
 
 # After the loop, check if there's any leftover data (less than 8 notes)
 if current_i > 0 and ms_dict:
