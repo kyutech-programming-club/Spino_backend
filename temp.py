@@ -3,11 +3,11 @@ import numpy as np
 import librosa
 import os
 import json
-# from connection import send_data_loop  # Unityにデータを送信する関数
+from connection import send_data_loop  # Unityにデータを送信する関数
 
 # 音声ファイルのパス
 current_dir = os.path.dirname(os.path.abspath(__file__))
-audio_file_path = os.path.join(current_dir, "audio_files", "hole_new_world_30.mp3")
+audio_file_path = os.path.join(current_dir, "audio_files", "hole_new_world.mp3")
 
 # ms_dictのパス
 ms_dict_path = os.path.join(current_dir, "ms_dict")
@@ -100,9 +100,9 @@ for audio_data in split_audio_data:
         
         with open(ms_save_path, "w", encoding="utf-8") as f:
             json.dump(ms_dict, f, ensure_ascii=False, indent=4)
-        
+
         # Unityにデータを送信する処理を呼び出す（実際の送信処理はコメントアウト）
-        # send_data_loop(ms_save_path)
+        send_data_loop(ms_dict)
 
         # 次の小節に備えてリストをリセット
         ms_list = []
