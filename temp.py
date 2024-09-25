@@ -2,8 +2,8 @@ import sounddevice as sd
 import numpy as np
 import librosa
 import os
-import json 
-# from connection import send_data_loop
+import json
+from connection import send_data_loop
 
 # 音声ファイルのパス
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -23,17 +23,17 @@ note_to_doremi = {
     'D♯': 'レ',
     'E': 'ミ',
     'F': 'ファ',
-    'F♯': 'ファ', 
+    'F♯': 'ファ',
     'G': 'ソ',
     'G♯': 'ソ',
     'A': 'ラ',
-    'A♯': 'ラ#',
+    'A♯': 'ラ',
     'B': 'シ'
 }
 
 # 音声データを指定された時間毎に分割
 def split_audio(audio_data, split_time, sr=22050):
-    split_index = int(sr * split_time) 
+    split_index = int(sr * split_time)
     split_audio_data = [audio_data[i:i+split_index] for i in range(2*split_index, len(audio_data), split_index)]
     return split_audio_data
 
@@ -44,7 +44,7 @@ def get_next_filename(base_filename, extension, i):
 
 # バイオリンの音階を判定する
 def ms_recognition(indata, sr=22050, hop_length=512):
-    # 入力された音声データを取得 
+    # 入力された音声データを取得
     audio_data = indata # 1チャンネル分の音声
     
     # ピッチ推定（基本周波数を取得）
@@ -54,11 +54,9 @@ def ms_recognition(indata, sr=22050, hop_length=512):
     if f0 is not None:
         # nanを除いた周波数の平均を取得
         valid_f0 = f0[~np.isnan(f0)]
-        #
-        print(valid_f0)
         if len(valid_f0) > 0:
             dominant_f0 = np.mean(valid_f0)
-            note = librosa.hz_to_note(dominant_f0) # 周波数を対応する音階名に変換する
+            note = librosa.hz_to_note(dominant_f0)  # 周波数を対応する音階名に変換する
             # 音階をドレミファソラシドに変換
             base_note = note[:-1]  # 音階（例: C, D#, E）
             octave = note[-1]      # オクターブ番号（例: 4）
@@ -77,7 +75,7 @@ def ms_recognition(indata, sr=22050, hop_length=512):
 # 音声ファイルを読み込み、リアルタイムで音声を処理
 audio_data, sr = librosa.load(audio_file_path, sr=sr)
 
-# 音声ファイルを0.476秒ごとに分割(八部音符の秒数)
+# 音声ファイルを0.27秒ごとに分割(八部音符の秒数)
 split_audio_data = split_audio(audio_data, split_time=0.27, sr=sr)
 
 ms_dict = {}
@@ -91,37 +89,60 @@ for file in os.listdir(ms_dict_path):
     file_path = os.path.join(ms_dict_path, file)
     os.remove(file_path)
 
+# フラグ: "ファ5"が検出されたかどうかを追跡
+found_fa5 = False
+
 # 音声データをUnityに送信する
 for audio_data in split_audio_data:
-    ms_dict[current_i] = ms_recognition(audio_data)
-    ms_list.append(ms_dict[current_i])
-    ms_dict[current_i]
-    current_i += 1
-    # 1小節分の音階を取得したらUnityに送信する
-    if current_i == 8:
-        filename = get_next_filename("ms_dict", "json", i)
-        ms_save_path= os.path.join(ms_dict_path, filename)
-        print("******************************************************************")
-        print(f"{i + 1}小節目終了")
-        print("******************************************************************")
-        with open(ms_save_path, "w", encoding="utf-8") as f:
-            f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
-        # send_data_loop(ms_dict)
-        ms_dict = {}
-        current_i = 0
-        i += 1
-
-print(ms_list)
-
-#------音階の正誤判定用------#
-# for audio_data in split_audio_data:
-#     current_note = ms_recognition(audio_data)
+    detected_note = ms_recognition(audio_data)
     
-#     # 前回の音階と同じでない場合のみ、ディクショナリに追加する
-#     if current_note != previous_note:
-#         ms_dict[current_i] = current_note
-#         current_i += 1
-#         previous_note = current_note
+    # "ファ5"が見つかっていないかつ"ファ5"が検知された場合、フラグをTrueにする
+    if not found_fa5 and detected_note == "ファ5":
+        print("ファ5が検知されました。ここからJSONファイルを生成します。")
+        found_fa5 = True
 
-# with open("ms_dict.json", "w", encoding="utf-8") as f:
-#     f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
+    # "ファ5"を検知した後のみ、処理を進める
+    if found_fa5:
+        ms_dict[current_i] = detected_note
+        ms_list.append(ms_dict[current_i])
+        current_i += 1
+
+        # 1小節分の音階を取得したらUnityに送信する
+        if current_i == 8:
+            filename = get_next_filename("ms_dict", "json", i)
+            ms_save_path= os.path.join(ms_dict_path, filename)
+            print("******************************************************************")
+            print(f"{i + 1}小節目終了")
+            print("******************************************************************")
+            
+            # Save the data for the measure into a JSON file
+            with open(ms_save_path, "w", encoding="utf-8") as f:
+                f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
+            
+            # Send the data to Unity
+            test = {"key": ','.join(ms_list)}
+            print(test)
+            send_data_loop(test)
+            print(ms_dict)
+            
+            # Reset for the next measure
+            ms_dict = {}
+            current_i = 0
+            i += 1
+
+# After the loop, check if there's any leftover data (less than 8 notes)
+if current_i > 0 and ms_dict:
+    test = {"key": ','.join(ms_list)}
+    filename = get_next_filename("ms_dict", "json", i)
+    ms_save_path = os.path.join(ms_dict_path, filename)
+    print(f"Sending remaining data (less than 8 notes): {current_i} notes.")
+    
+    # Save remaining notes to a JSON file
+    with open(ms_save_path, "w", encoding="utf-8") as f:
+        f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
+    
+    # Send the remaining data to Unity
+    send_data_loop(test)
+
+# Print the full list of notes
+print(ms_list)
