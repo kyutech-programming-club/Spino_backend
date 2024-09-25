@@ -27,23 +27,21 @@ connector.start_listening(on_data_received)
 print("connected")
 
 # デモ用のループ
-def send_data_loop(data: dict):
-    while True:
-        # Enterで送信を開始（入力内容は送信内容と関係ない）
-        input_data = input()
+def send_data_loop(data):
+    # Enterで送信を開始（入力内容は送信内容と関係ない）
+    input_data = input()
 
-        # Unityへ停止命令
-        if input_data == "q":
-            connector.stop_connection()
-            break
+    # Unityへ停止命令
+    if input_data == "q":
+        connector.stop_connection()
 
-        # 送るデータをdictionary形式で
-        data = data
+    # 送るデータをdictionary形式で
+    data = data
 
-        print(f"send_data:{data}")
+    print(f"send_data:{data}")
 
-        # Unityへ送る
-        connector.send("test", data)
+    # Unityへ送る
+    connector.send("test", data)
 
 if __name__ == "__main__":
     send_data_loop({"test": "test"})
