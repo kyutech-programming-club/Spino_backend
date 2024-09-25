@@ -25,15 +25,6 @@ print("connected")
 
 # デモ用のループ
 def send_data_loop(data: dict):
-    while True:
-        # Enterで送信を開始（入力内容は送信内容と関係ない）
-        input_data = input()
-
-        # Unityへ停止命令
-        if input_data == "q":
-            connector.stop_connection()
-            break
-
         # 送るデータをJSON形式に変換
         json_data = json.dumps(data)
         print(f"send_data: {data}")
