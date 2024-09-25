@@ -3,7 +3,7 @@ import numpy as np
 import librosa
 import os
 import json
-from connection import send_data_loop
+# from connection import send_data_loop
 
 # 音声ファイルのパス
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +14,7 @@ ms_dict_path = os.path.join(current_dir, "ms_dict")
 
 # サンプリングレートを設定
 sr = 22050  # サンプリングレート
+previous_doremi_note = "不明"
 
 # 英語音階名をドレミファソラシドに変換する辞書
 note_to_doremi = {
@@ -44,6 +45,8 @@ def get_next_filename(base_filename, extension, i):
 
 # バイオリンの音階を判定する
 def ms_recognition(indata, sr=22050, hop_length=512):
+    global previous_doremi_note
+    
     # 入力された音声データを取得
     audio_data = indata # 1チャンネル分の音声
     
@@ -57,16 +60,25 @@ def ms_recognition(indata, sr=22050, hop_length=512):
         if len(valid_f0) > 0:
             dominant_f0 = np.mean(valid_f0)
             note = librosa.hz_to_note(dominant_f0)  # 周波数を対応する音階名に変換する
+            
             # 音階をドレミファソラシドに変換
             base_note = note[:-1]  # 音階（例: C, D#, E）
             octave = note[-1]      # オクターブ番号（例: 4）
-            doremi_note = note_to_doremi.get(base_note, "不明") + octave  # ドレミファソラシド形式に変換
+            
+            # オクターブが4, 5, 6の範囲内の音階のみを取得
+            if octave == "4" or octave == "5" or octave == "6":
+                doremi_note = note_to_doremi.get(base_note, "不明") + octave  # ドレミファソラシド形式に変換
+            else:
+                print("音階が4, 5, 6の範囲外です")
+                doremi_note = previous_doremi_note # 直前の音階を返す
             
             print(f"基本周波数: {dominant_f0:.2f} Hz, 音階: {doremi_note}")
             print("------------------------------------------------------------------")
+            previous_doremi_note = doremi_note
             return doremi_note
         else:
             print("休符判定")
+            print("------------------------------------------------------------------")
             return "休符"
     else:
         print("ピッチ検知に失敗した!!")
@@ -122,7 +134,7 @@ for audio_data in split_audio_data:
             # Send the data to Unity
             test = {"key": ','.join(ms_list)}
             print(test)
-            send_data_loop(test)
+            # send_data_loop(test)
             print(ms_dict)
             
             # Reset for the next measure
@@ -142,7 +154,7 @@ if current_i > 0 and ms_dict:
         f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
     
     # Send the remaining data to Unity
-    send_data_loop(test)
+    # send_data_loop(test)
 
 # Print the full list of notes
 print(ms_list)
