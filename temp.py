@@ -3,11 +3,11 @@ import numpy as np
 import librosa
 import os
 import json
-from connection import send_data_loop
+# from connection import send_data_loop  # Unityにデータを送信する関数
 
 # 音声ファイルのパス
 current_dir = os.path.dirname(os.path.abspath(__file__))
-audio_file_path = os.path.join(current_dir, "audio_files", "hole_new_world.mp3")
+audio_file_path = os.path.join(current_dir, "audio_files", "hole_new_world_30.mp3")
 
 # ms_dictのパス
 ms_dict_path = os.path.join(current_dir, "ms_dict")
@@ -74,8 +74,6 @@ audio_data, sr = librosa.load(audio_file_path, sr=sr)
 # 音声ファイルを0.476秒ごとに分割(八部音符の秒数)
 split_audio_data = split_audio(audio_data, split_time=0.476, sr=sr)
 
-ms_list = []  # ms_dictの代わりにリストで音階を保存
-current_i = 0
 i = 0
 
 # ms_dict以下のファイルを削除
@@ -84,23 +82,28 @@ for file in os.listdir(ms_dict_path):
     os.remove(file_path)
 
 # 音声データをUnityに送信する
+ms_list = []  # 各小節の音階を格納するリスト
+
 for audio_data in split_audio_data:
     note = ms_recognition(audio_data)
-    ms_list.append(note)
-    current_i += 1
-    
-    # 1小節分の音階を取得したらUnityに送信する
-    if current_i == 8:
+    ms_list.append(note)  # 音階をリストに追加
+    i += 1
+
+    # 1小節分（8音符分）の音階が集まったら送信
+    if i == 8:
+        # 辞書に固定キー "key" で音階を保存
+        ms_dict = {"key": ','.join(ms_list)}
+
+        # JSONファイルに書き込む
         filename = get_next_filename("ms_dict", "json", i)
         ms_save_path = os.path.join(ms_dict_path, filename)
         
         with open(ms_save_path, "w", encoding="utf-8") as f:
-            json.dump(ms_list, f, ensure_ascii=False, indent=4)
+            json.dump(ms_dict, f, ensure_ascii=False, indent=4)
         
-        # Unityにデータを送信する場合は以下を有効化
+        # Unityにデータを送信する処理を呼び出す（実際の送信処理はコメントアウト）
         # send_data_loop(ms_save_path)
-        
+
         # 次の小節に備えてリストをリセット
         ms_list = []
-        current_i = 0
-        i += 1
+        i = 0
