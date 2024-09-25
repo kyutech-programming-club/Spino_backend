@@ -106,9 +106,11 @@ for audio_data in split_audio_data:
         # Save the data for the measure into a JSON file
         with open(ms_save_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
-        
+        test = {"key": ','.join(ms_list)}
+        print(test)
         # Send the data to Unity
-        send_data_loop(ms_dict)
+        send_data_loop(test)
+        print(ms_dict)
         
         # Reset for the next measure
         ms_dict = {}
@@ -117,6 +119,7 @@ for audio_data in split_audio_data:
 
 # After the loop, check if there's any leftover data (less than 8 notes)
 if current_i > 0 and ms_dict:
+    test = {"key": ','.join(ms_list)}
     filename = get_next_filename("ms_dict", "json", i)
     ms_save_path = os.path.join(ms_dict_path, filename)
     print(f"Sending remaining data (less than 8 notes): {current_i} notes.")
@@ -126,7 +129,7 @@ if current_i > 0 and ms_dict:
         f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
     
     # Send the remaining data to Unity
-    send_data_loop(ms_dict)
+    send_data_loop(test)
 
 # Print the full list of notes
 print(ms_list)

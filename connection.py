@@ -24,7 +24,7 @@ connector.start_listening(on_data_received)
 print("connected")
 
 # デモ用のループ
-def send_data_loop(data: dict):
+def send_data_loop(data):
         # 送るデータをJSON形式に変換
         json_data = json.dumps(data)
         print(f"send_data: {data}")
