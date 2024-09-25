@@ -3,6 +3,7 @@ import numpy as np
 import librosa
 import os
 import json
+# from connection import send_data_loop
 
 # 音声ファイルのパス
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -47,7 +48,7 @@ def ms_recognition(indata, sr=22050, hop_length=512):
     audio_data = indata # 1チャンネル分の音声
     
     # ピッチ推定（基本周波数を取得）
-    f0, voiced_flag, voiced_probs = librosa.pyin(audio_data, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr=sr, hop_length=hop_length)
+    f0, _, _  = librosa.pyin(audio_data, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr=sr, hop_length=hop_length)
     
     # 基本周波数が存在するかを確認
     if f0 is not None:
@@ -55,9 +56,6 @@ def ms_recognition(indata, sr=22050, hop_length=512):
         valid_f0 = f0[~np.isnan(f0)]
         # print(valid_f0)
         if len(valid_f0) > 0:
-            # 周波数の差が40Hz以上の場合は
-            # if abs(max(valid_f0)-min(valid_f0)) > 40:
-            #     dominant_f0 = np.median(valid_f0)
             dominant_f0 = np.mean(valid_f0)
             note = librosa.hz_to_note(dominant_f0) # 周波数を対応する音階名に変換する
             # 音階をドレミファソラシドに変換
@@ -85,7 +83,28 @@ current_i = 0
 i = 0
 previous_note = None
 
-# 音階の正誤判定用
+# ms_dict以下のファイルを削除
+for file in os.listdir(ms_dict_path):
+    file_path = os.path.join(ms_dict_path, file)
+    os.remove(file_path)
+
+# 音声データをUnityに送信する
+for audio_data in split_audio_data:
+    ms_dict[current_i] = ms_recognition(audio_data)
+    current_i += 1
+    # 1小節分の音階を取得したらUnityに送信する
+    if current_i == 8:
+        filename = get_next_filename("ms_dict", "json", i)
+        ms_save_path= os.path.join(ms_dict_path, filename)
+        
+        with open(ms_save_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
+        # send_data_loop(ms_save_path)
+        ms_dict = {}
+        current_i = 0
+        i += 1
+
+#------音階の正誤判定用------#
 # for audio_data in split_audio_data:
 #     current_note = ms_recognition(audio_data)
     
@@ -97,9 +116,3 @@ previous_note = None
 
 # with open("ms_dict.json", "w", encoding="utf-8") as f:
 #     f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
-
-# 音声データをリアルタイムで処理
-for audio_data in split_audio_data:
-    ms_data = ms_recognition(audio_data)
-    print(ms_data)
-    # send_data_loop(ms_data)
