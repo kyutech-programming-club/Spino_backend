@@ -4,11 +4,11 @@ import librosa
 import json
 import os
 
-# from connection import send_data_loop
+from connection import send_data_loop
 
 # 定数の設定
 SR = 22050  # サンプリングレート(Hz)
-DURATION = 0.27  # 110BPMの場合の八分音符の秒数
+DURATION = 0.0086  # 110BPMの場合の八分音符の秒数
 BLOCK_SIZE = int(SR * DURATION)  # 0.27秒分のサンプル数
 
 # 音階名を保存するフォルダのパス
@@ -59,7 +59,7 @@ def get_next_filename(base_filename, extension, i):
 # 音声データの処理（基本周波数と音階を推定）
 def ms_recognition(audio_data):
     global previous_doremi_note, doremi_note
-    f0, _, _ = librosa.pyin(audio_data, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr=SR, hop_length=512)
+    f0, _, _ = librosa.pyin(audio_data, fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'), sr=SR, hop_length=256)
     
     if f0 is not None:
         valid_f0 = f0[~np.isnan(f0)]
@@ -98,7 +98,7 @@ def save_to_json(ms_dict, i):
 def send_data_to_unity(ms_list):
     data = {"key": ','.join(ms_list)}
     print(f"Unityにデータを送信: {data}")
-    # send_data_loop(data)  # 実際のデータ送信処理
+    send_data_loop(data)  # 実際のデータ送信処理
 
 # コールバック関数
 def audio_callback(indata, frames, time, status):
@@ -160,7 +160,7 @@ def start_stream():
         with open(ms_save_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
         # Send the remaining data to Unity
-        # send_data_loop(test)
+        send_data_loop(test)
 
     # Unityに送信する音階の数を、正解の数と同数にする処理
     sub_ms = ans_json_path_length - len(ms_list)
@@ -185,7 +185,7 @@ def start_stream():
     if len(ms_list) == ans_json_path_length:
         print("同数に調整できました")
     test = {"key": ','.join(ms_list)}
-    # send_data_loop(test)
+    send_data_loop(test)
     print(test)
     
 if __name__ == "__main__":

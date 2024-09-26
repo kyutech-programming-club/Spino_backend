@@ -3,11 +3,11 @@ import numpy as np
 import librosa
 import os
 import json
-# from connection import send_data_loop
+from connection import send_data_loop
 
 # 音声ファイルのパス
 current_dir = os.path.dirname(os.path.abspath(__file__))
-audio_file_path = os.path.join(current_dir, "audio_files", "IMG_3570.mp3")
+audio_file_path = os.path.join(current_dir, "audio_files", "IMG_6043.mp3")
 
 # ms_dictのパス
 ms_dict_path = os.path.join(current_dir, "ms_dict")
@@ -134,7 +134,7 @@ for audio_data in split_audio_data:
             # Send the data to Unity
             test = {"key": ','.join(ms_list)}
             print(test)
-            # send_data_loop(test)
+            send_data_loop(test)
             print(ms_dict)
             
             # Reset for the next measure
@@ -154,7 +154,7 @@ if current_i > 0 and ms_dict:
         f.write(json.dumps(ms_dict, ensure_ascii=False, indent=4))
     
     # Send the remaining data to Unity
-    # send_data_loop(test)
+    send_data_loop(test)
 
 # Print the full list of notes
 print(ms_list)
